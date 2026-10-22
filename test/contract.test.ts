@@ -164,7 +164,7 @@ test('the request body of POST /check is required JSON, and each of its examples
 
 test('the fake answers POST /check with an accepted text, so the guestbook stores entries in a trial', () => {
   const [first] = examples(firstAnswer(node(node(paths['/check'], '/check').post, 'post /check'), 'post /check').media, 'post /check 200');
-  assert.deepEqual(first?.[1], { ok: true, words: [] });
+  assert.deepEqual(first?.[1], { ok: true, words: [], severity: 'none' });
 });
 
 let server: Server;
