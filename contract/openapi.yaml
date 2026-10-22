@@ -31,7 +31,7 @@ paths:
                   text: Win the jackpot, no scam
       responses:
         "200":
-          description: The verdict. ok is false when the text holds a listed word, and words names each one found, once, in the order of the text. severity is none when ok is true, and review otherwise, for the text to be held for review.
+          description: The verdict. ok is false when the text holds a listed word, and words names each one found, once, in the order of the text. severity is none when ok is true, and review otherwise, for the text to be held for review. positions gives, for each word of words, the offsets where it starts in the text, every one, in order.
           content:
             application/json:
               schema:
@@ -43,6 +43,7 @@ paths:
                     ok: true
                     words: []
                     severity: none
+                    positions: {}
                 refused:
                   summary: Two listed words
                   value:
@@ -51,6 +52,11 @@ paths:
                       - jackpot
                       - scam
                     severity: review
+                    positions:
+                      jackpot:
+                        - 8
+                      scam:
+                        - 20
         "400":
           description: The body is not JSON, or has no text string.
           content:
@@ -105,6 +111,7 @@ components:
         - ok
         - words
         - severity
+        - positions
       properties:
         ok:
           type: boolean
@@ -118,6 +125,14 @@ components:
             - none
             - review
           description: none when ok is true, review otherwise.
+        positions:
+          type: object
+          description: For each word of words, the offsets where it starts in the text, every one, in order. An offset counts UTF-16 code units (a JavaScript string index) in the text as sent, before any change of case or normalization.
+          additionalProperties:
+            type: array
+            items:
+              type: integer
+              minimum: 0
       additionalProperties: false
     Error:
       type: object
