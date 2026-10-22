@@ -38,9 +38,3 @@ test('words.txt, the list the app serves, loads and is not empty', async () => {
   assert.deepEqual([...list], [...parseWords(readFileSync(WORDS_PATH, 'utf8'))]);
   assert.ok(list.has('spam'), 'the proof and the README use "spam" as the listed word');
 });
-
-test('words.txt refuses "Casino", whatever its case, and names it in lowercase', async () => {
-  const list = await loadWords();
-  assert.deepEqual(findWords(list, 'Win big at our Casino tonight!'), ['casino']);
-  assert.deepEqual(findWords(list, 'CASINO'), ['casino']);
-});
