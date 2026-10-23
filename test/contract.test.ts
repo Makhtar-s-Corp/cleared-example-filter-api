@@ -49,7 +49,7 @@ function resolve(schema: Node, where: string): Node {
 // The JSON Schema keywords the contract uses, checked on a value.
 function conforms(value: unknown, raw: Node, where: string): void {
   const schema = resolve(raw, where);
-  onlyKeys(schema, ['type', 'properties', 'required', 'additionalProperties', 'items', 'enum', 'description', 'maxLength', 'minLength', '$ref'], where);
+  onlyKeys(schema, ['type', 'properties', 'required', 'additionalProperties', 'items', 'enum', 'description', 'maxLength', 'minLength', 'minimum', '$ref'], where);
   if (schema.enum !== undefined) assert.ok((schema.enum as Yaml[]).includes(value as Yaml), `${where}: ${JSON.stringify(value)} is one of the enum`);
   switch (schema.type) {
     case 'object': {
@@ -59,7 +59,8 @@ function conforms(value: unknown, raw: Node, where: string): void {
       for (const [name, item] of Object.entries(value)) {
         const property = properties[name];
         if (property === undefined) {
-          assert.equal(schema.additionalProperties, true, `${where}: "${name}" is not a property of the schema`);
+          if (isNode(schema.additionalProperties)) conforms(item, schema.additionalProperties, `${where}.${name}`);
+          else assert.equal(schema.additionalProperties, true, `${where}: "${name}" is not a property of the schema`);
           continue;
         }
         conforms(item, node(property, `${where}.${name}`), `${where}.${name}`);
@@ -73,6 +74,10 @@ function conforms(value: unknown, raw: Node, where: string): void {
     case 'string':
       assert.equal(typeof value, 'string', `${where}: a string`);
       if (typeof schema.maxLength === 'number') assert.ok((value as string).length <= schema.maxLength, `${where}: within maxLength`);
+      return;
+    case 'integer':
+      assert.ok(Number.isInteger(value), `${where}: an integer`);
+      if (typeof schema.minimum === 'number') assert.ok((value as number) >= schema.minimum, `${where}: at least its minimum`);
       return;
     case 'boolean':
       assert.equal(typeof value, 'boolean', `${where}: a boolean`);
@@ -164,7 +169,7 @@ test('the request body of POST /check is required JSON, and each of its examples
 
 test('the fake answers POST /check with an accepted text, so the guestbook stores entries in a trial', () => {
   const [first] = examples(firstAnswer(node(node(paths['/check'], '/check').post, 'post /check'), 'post /check').media, 'post /check 200');
-  assert.deepEqual(first?.[1], { ok: true, words: [], severity: 'none' });
+  assert.deepEqual(first?.[1], { ok: true, words: [], positions: {}, severity: 'none' });
 });
 
 let server: Server;
