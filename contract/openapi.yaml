@@ -31,7 +31,7 @@ paths:
                   text: Win the jackpot, no scam
       responses:
         "200":
-          description: The verdict. ok is false when the text holds a listed word, and words names each one found, once, in the order of the text.
+          description: The verdict. ok is false when the text holds a listed word, and words names each one found, once, in the order of the text. severity is none when ok is true, and review otherwise, for the text to be held for review.
           content:
             application/json:
               schema:
@@ -42,6 +42,7 @@ paths:
                   value:
                     ok: true
                     words: []
+                    severity: none
                 refused:
                   summary: Two listed words
                   value:
@@ -49,6 +50,7 @@ paths:
                     words:
                       - jackpot
                       - scam
+                    severity: review
         "400":
           description: The body is not JSON, or has no text string.
           content:
@@ -102,6 +104,7 @@ components:
       required:
         - ok
         - words
+        - severity
       properties:
         ok:
           type: boolean
@@ -109,6 +112,12 @@ components:
           type: array
           items:
             type: string
+        severity:
+          type: string
+          enum:
+            - none
+            - review
+          description: none when ok is true, review otherwise.
       additionalProperties: false
     Error:
       type: object
