@@ -9,7 +9,6 @@ export const WORDS_PATH = fileURLToPath(new URL('../words.txt', import.meta.url)
 
 // A word is a run of letters and digits, in any script.
 const WORD = /^[\p{L}\p{N}]+$/u;
-const SEPARATORS = /[^\p{L}\p{N}]+/u;
 
 const fold = (text: string): string => text.normalize('NFC').toLowerCase();
 
@@ -32,7 +31,49 @@ export async function loadWords(path: string = WORDS_PATH): Promise<WordList> {
 
 // The listed words the text holds, each once, in the order they first appear.
 export function findWords(list: WordList, text: string): string[] {
-  const found = new Set<string>();
-  for (const word of fold(text).split(SEPARATORS)) if (list.has(word)) found.add(word);
-  return [...found];
+  return [...findPositions(list, text).keys()];
+}
+
+// A run of letters, marks and digits is folded whole, so a decomposed accent
+// composes with its letter; the words are then the runs of letters and digits
+// of the folded run, a mark left alone splitting them.
+const RUN = /[\p{L}\p{M}\p{N}]+/gu;
+const PIECE = /[\p{L}\p{N}]+/gu;
+
+const codePoints = (text: string): number => [...text].length;
+
+// Where, in code points of the run as sent, starts the word found at offset
+// `at` of the folded run: the shortest start of the run that folds to at
+// least `at` units, found by halving.
+function startInRun(run: string, at: number): number {
+  if (at === 0) return 0;
+  const points = [...run];
+  let low = 1;
+  let high = points.length;
+  while (low < high) {
+    const middle = Math.floor((low + high) / 2);
+    if (fold(points.slice(0, middle).join('')).length >= at) high = middle;
+    else low = middle + 1;
+  }
+  return low;
+}
+
+// The listed words the text holds, in the order they first appear, each with
+// the offsets where it starts, counted in code points of the text as sent.
+export function findPositions(list: WordList, text: string): Map<string, number[]> {
+  const found = new Map<string, number[]>();
+  let index = 0;
+  let offset = 0;
+  for (const run of text.matchAll(RUN)) {
+    offset += codePoints(text.slice(index, run.index));
+    index = run.index;
+    for (const piece of fold(run[0]).matchAll(PIECE)) {
+      if (!list.has(piece[0])) continue;
+      const at = offset + startInRun(run[0], piece.index);
+      const positions = found.get(piece[0]);
+      if (positions === undefined) found.set(piece[0], [at]);
+      else positions.push(at);
+    }
+  }
+  return found;
 }
