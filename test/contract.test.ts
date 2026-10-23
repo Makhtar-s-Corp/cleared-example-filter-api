@@ -174,6 +174,15 @@ test('the fake answers POST /check with an accepted text, so the guestbook store
   assert.deepEqual(first?.[1], { ok: true, words: [], positions: {}, severity: 'none' });
 });
 
+test('each answer example of POST /check gives positions for exactly its words, which the schema cannot say', () => {
+  const { media } = firstAnswer(node(node(paths['/check'], '/check').post, 'post /check'), 'post /check');
+  for (const [name, value] of examples(media, 'post /check 200')) {
+    const answer = node(value as Yaml, `example ${name}`);
+    const positions = node(answer.positions, `example ${name}.positions`);
+    assert.deepEqual(Object.keys(positions).sort(), [...(answer.words as string[])].sort(), name);
+  }
+});
+
 let server: Server;
 let base = '';
 

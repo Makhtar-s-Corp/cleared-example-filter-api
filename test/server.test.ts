@@ -41,6 +41,13 @@ test('POST /check with listed words is not ok, names them and gives where each o
   assert.deepEqual(await response.json(), { ok: false, words: ['spam', 'scam'], positions: { spam: [6, 31], scam: [20] }, severity: 'review' });
 });
 
+test('positions has a key for each word of words, and no other', async () => {
+  for (const text of ['Thank you', 'scam', 'spam, scam, spam', 'SCAM spammer spam']) {
+    const answer = (await (await check(JSON.stringify({ text }))).json()) as { words: string[]; positions: Record<string, number[]> };
+    assert.deepEqual(Object.keys(answer.positions).sort(), [...answer.words].sort(), text);
+  }
+});
+
 test('severity is none for clean text', async () => {
   const answer = (await (await check(JSON.stringify({ text: 'Thank you' }))).json()) as { severity?: unknown };
   assert.equal(answer.severity, 'none');

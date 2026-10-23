@@ -43,6 +43,16 @@ test('findPositions gives where each occurrence of each listed word starts, word
   assert.deepEqual([...findPositions(list, '')], []);
 });
 
+test('a mark that composes into nothing ends the word, so it cannot hide a listed word', () => {
+  const list = parseWords('spam\n');
+  const circle = String.fromCodePoint(0x20dd);
+  const visarga = String.fromCodePoint(0x0903);
+  assert.deepEqual(findWords(list, `spam${circle}`), ['spam']);
+  assert.deepEqual(findWords(list, `spam${visarga} spam`), ['spam']);
+  assert.deepEqual([...findPositions(list, `spam${circle}${visarga}spam spam`)], [['spam', [0, 6, 11]]]);
+  assert.deepEqual(findWords(list, `${circle}spam`), ['spam'], 'a mark with no letter before it is not a word');
+});
+
 test('positions count code points of the text as sent, and an accent typed as a mark stays in its word', () => {
   const list = parseWords('spam\nété\n');
   assert.deepEqual([...findPositions(list, '😀 spam')], [['spam', [2]]], 'an emoji is one code point, two UTF-16 units');

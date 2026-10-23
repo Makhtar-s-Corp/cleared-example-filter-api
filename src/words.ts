@@ -7,11 +7,14 @@ export type WordList = ReadonlySet<string>;
 
 export const WORDS_PATH = fileURLToPath(new URL('../words.txt', import.meta.url));
 
-// A word is a run of letters and digits, in any script. In a text, a word may
-// also carry combining marks after its first character, so an accent typed
-// as a separate mark (e then U+0301) stays inside its word.
+// A word is a run of letters and digits, in any script, once the text is in
+// NFC: an accent typed as a separate mark (e then U+0301) composes into its
+// letter, and a mark that composes into nothing (U+20DD) ends the word.
 const WORD = /^[\p{L}\p{N}]+$/u;
-const WORDS_IN_TEXT = /[\p{L}\p{N}][\p{L}\p{N}\p{M}]*/gu;
+const WORD_CHAR = /^[\p{L}\p{N}]$/u;
+// A character with the marks that follow it: NFC composes within these, so
+// each is normalized alone and keeps its offset in the text as sent.
+const CLUSTERS = /\P{M}\p{M}*|\p{M}+/gu;
 
 const fold = (text: string): string => text.normalize('NFC').toLowerCase();
 
@@ -38,17 +41,28 @@ export async function loadWords(path: string = WORDS_PATH): Promise<WordList> {
 // a word of digits first).
 export function findPositions(list: WordList, text: string): Map<string, number[]> {
   const found = new Map<string, number[]>();
-  let index = 0;
+  let word = '';
+  let start = 0;
   let offset = 0;
-  for (const match of text.matchAll(WORDS_IN_TEXT)) {
-    for (const _ of text.slice(index, match.index)) offset++;
-    index = match.index;
-    const word = fold(match[0]);
-    if (!list.has(word)) continue;
-    const offsets = found.get(word);
-    if (offsets === undefined) found.set(word, [offset]);
-    else offsets.push(offset);
+  const end = (): void => {
+    const folded = fold(word);
+    word = '';
+    if (!list.has(folded)) return;
+    const offsets = found.get(folded);
+    if (offsets === undefined) found.set(folded, [start]);
+    else offsets.push(start);
+  };
+  for (const [cluster] of text.matchAll(CLUSTERS)) {
+    for (const char of cluster.normalize('NFC')) {
+      if (!WORD_CHAR.test(char)) end();
+      else if (word === '') {
+        start = offset;
+        word = char;
+      } else word += char;
+    }
+    for (const _ of cluster) offset++;
   }
+  end();
   return found;
 }
 
