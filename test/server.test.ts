@@ -32,13 +32,20 @@ test('POST /check with clean text is ok, with no words', async () => {
   assert.equal(response.status, 200);
   assert.equal(response.headers.get('content-type'), 'application/json; charset=utf-8');
   assert.equal(response.headers.get('cache-control'), 'no-store');
-  assert.deepEqual(await response.json(), { ok: true, words: [], severity: 'none' });
+  assert.deepEqual(await response.json(), { ok: true, words: [], positions: {}, severity: 'none' });
 });
 
-test('POST /check with listed words is not ok, and names them', async () => {
+test('POST /check with listed words is not ok, names them and gives where each occurrence starts', async () => {
   const response = await check(JSON.stringify({ text: 'Cheap spam here, no scam, more SPAM' }));
   assert.equal(response.status, 200);
-  assert.deepEqual(await response.json(), { ok: false, words: ['spam', 'scam'], severity: 'review' });
+  assert.deepEqual(await response.json(), { ok: false, words: ['spam', 'scam'], positions: { spam: [6, 31], scam: [20] }, severity: 'review' });
+});
+
+test('positions has a key for each word of words, and no other', async () => {
+  for (const text of ['Thank you', 'scam', 'spam, scam, spam', 'SCAM spammer spam']) {
+    const answer = (await (await check(JSON.stringify({ text }))).json()) as { words: string[]; positions: Record<string, number[]> };
+    assert.deepEqual(Object.keys(answer.positions).sort(), [...answer.words].sort(), text);
+  }
 });
 
 test('severity is none for clean text', async () => {
@@ -54,7 +61,7 @@ test('severity is review for text with a listed word', async () => {
 test('a JSON content type with a charset is accepted', async () => {
   const response = await check(JSON.stringify({ text: 'spam' }), 'application/json; charset=utf-8');
   assert.equal(response.status, 200);
-  assert.deepEqual(await response.json(), { ok: false, words: ['spam'], severity: 'review' });
+  assert.deepEqual(await response.json(), { ok: false, words: ['spam'], positions: { spam: [0] }, severity: 'review' });
 });
 
 test('a body that is not JSON, or has no text string, is 400 with the reason', async () => {

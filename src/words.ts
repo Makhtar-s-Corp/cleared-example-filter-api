@@ -7,9 +7,14 @@ export type WordList = ReadonlySet<string>;
 
 export const WORDS_PATH = fileURLToPath(new URL('../words.txt', import.meta.url));
 
-// A word is a run of letters and digits, in any script.
+// A word is a run of letters and digits, in any script, once the text is in
+// NFC: an accent typed as a separate mark (e then U+0301) composes into its
+// letter, and a mark that composes into nothing (U+20DD) ends the word.
 const WORD = /^[\p{L}\p{N}]+$/u;
-const SEPARATORS = /[^\p{L}\p{N}]+/u;
+const WORD_CHAR = /^[\p{L}\p{N}]$/u;
+// A character with the marks that follow it: NFC composes within these, so
+// each is normalized alone and keeps its offset in the text as sent.
+const CLUSTERS = /\P{M}\p{M}*|\p{M}+/gu;
 
 const fold = (text: string): string => text.normalize('NFC').toLowerCase();
 
@@ -30,9 +35,38 @@ export async function loadWords(path: string = WORDS_PATH): Promise<WordList> {
   return parseWords(await readFile(path, 'utf8'));
 }
 
+// Where the listed words the text holds start: for each word, folded, the
+// offsets of all its occurrences, in code points of the text as sent. The
+// words come in the order they first appear (a Map, since an object would put
+// a word of digits first).
+export function findPositions(list: WordList, text: string): Map<string, number[]> {
+  const found = new Map<string, number[]>();
+  let word = '';
+  let start = 0;
+  let offset = 0;
+  const end = (): void => {
+    const folded = fold(word);
+    word = '';
+    if (!list.has(folded)) return;
+    const offsets = found.get(folded);
+    if (offsets === undefined) found.set(folded, [start]);
+    else offsets.push(start);
+  };
+  for (const [cluster] of text.matchAll(CLUSTERS)) {
+    for (const char of cluster.normalize('NFC')) {
+      if (!WORD_CHAR.test(char)) end();
+      else if (word === '') {
+        start = offset;
+        word = char;
+      } else word += char;
+    }
+    for (const _ of cluster) offset++;
+  }
+  end();
+  return found;
+}
+
 // The listed words the text holds, each once, in the order they first appear.
 export function findWords(list: WordList, text: string): string[] {
-  const found = new Set<string>();
-  for (const word of fold(text).split(SEPARATORS)) if (list.has(word)) found.add(word);
-  return [...found];
+  return [...findPositions(list, text).keys()];
 }
