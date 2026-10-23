@@ -31,7 +31,7 @@ paths:
                   text: Win the jackpot, no scam
       responses:
         "200":
-          description: The verdict. ok is false when the text holds a listed word, and words names each one found, once, in the order of the text. severity is none when ok is true, and review otherwise, for the text to be held for review.
+          description: The verdict. ok is false when the text holds a listed word, and words names each one found, once, in the order of the text. positions gives, for each word found, the offsets where each of its occurrences starts, in code points of the text as sent. severity is none when ok is true, and review otherwise, for the text to be held for review.
           content:
             application/json:
               schema:
@@ -42,6 +42,7 @@ paths:
                   value:
                     ok: true
                     words: []
+                    positions: {}
                     severity: none
                 refused:
                   summary: Two listed words
@@ -50,6 +51,11 @@ paths:
                     words:
                       - jackpot
                       - scam
+                    positions:
+                      jackpot:
+                        - 8
+                      scam:
+                        - 20
                     severity: review
         "400":
           description: The body is not JSON, or has no text string.
@@ -104,6 +110,7 @@ components:
       required:
         - ok
         - words
+        - positions
         - severity
       properties:
         ok:
@@ -112,6 +119,14 @@ components:
           type: array
           items:
             type: string
+        positions:
+          type: object
+          description: For each word of words, the offsets where each of its occurrences starts, in code points of the text as sent, in increasing order.
+          additionalProperties:
+            type: array
+            items:
+              type: integer
+              minimum: 0
         severity:
           type: string
           enum:
