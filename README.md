@@ -10,7 +10,7 @@ A small web service that tells whether a text holds a word of its list. The gues
 
 | Route | What it does |
 | --- | --- |
-| `POST /check` | Takes `{"text": "..."}` as JSON and answers `200 {"ok": true, "words": [], "severity": "none"}`, or `{"ok": false, "words": [...], "severity": "review"}` naming each listed word found, once, in the order of the text: the text is not refused but held for review. Answers 400 for a body that is not JSON or has no `text` string, 415 for a body not sent as `application/json`, and 413 for a body over 16 KiB. |
+| `POST /check` | Takes `{"text": "..."}` as JSON and answers `200 {"ok": true, "words": [], "positions": {}, "severity": "none"}`, or `{"ok": false, "words": [...], "positions": {...}, "severity": "review"}` naming each listed word found, once, in the order of the text, and giving for each the offsets where it starts, in code points of the text: the text is not refused but held for review. Answers 400 for a body that is not JSON or has no `text` string, 415 for a body not sent as `application/json`, and 413 for a body over 16 KiB. |
 | `GET /health` | `200 {"status":"ok"}`. |
 
 A word is a run of letters and digits, in any script. A listed word matches only as a whole word, whatever its case: `spam` matches "SPAM" and "spam-free", not "spammer".
