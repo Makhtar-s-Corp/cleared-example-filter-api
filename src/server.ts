@@ -1,5 +1,5 @@
 // The filter API's routes, on node:http (contract/openapi.yaml):
-//   POST /check   {"text": "..."} to {"ok": true|false, "words": [...], "severity": "none"|"review"}
+//   POST /check   {"text": "..."} to {"ok": true|false, "words": [...]}
 //   GET  /health  200 {"status":"ok"}
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 import { findWords, type WordList } from './words.ts';
@@ -61,8 +61,7 @@ async function check(words: WordList, request: IncomingMessage, response: Server
   const text = typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed) ? (parsed as { text?: unknown }).text : undefined;
   if (typeof text !== 'string') return sendJson(response, 400, { error: 'The body needs "text", a string.' });
   const found = findWords(words, text);
-  const ok = found.length === 0;
-  sendJson(response, 200, { ok, words: found, severity: ok ? 'none' : 'review' });
+  sendJson(response, 200, { ok: found.length === 0, words: found });
 }
 
 async function route(words: WordList, request: IncomingMessage, response: ServerResponse): Promise<void> {
