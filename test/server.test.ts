@@ -27,24 +27,24 @@ after(async () => {
 const check = (body: string, type = 'application/json'): Promise<Response> =>
   fetch(`${base}/check`, { method: 'POST', headers: { 'content-type': type }, body });
 
-test('POST /check with clean text is ok, with no words and severity none', async () => {
+test('POST /check with clean text is ok, with no words', async () => {
   const response = await check(JSON.stringify({ text: 'Lovely guestbook, thank you!' }));
   assert.equal(response.status, 200);
   assert.equal(response.headers.get('content-type'), 'application/json; charset=utf-8');
   assert.equal(response.headers.get('cache-control'), 'no-store');
-  assert.deepEqual(await response.json(), { ok: true, words: [], severity: 'none' });
+  assert.deepEqual(await response.json(), { ok: true, words: [] });
 });
 
-test('POST /check with listed words is not ok, names them, and has severity review', async () => {
+test('POST /check with listed words is not ok, and names them', async () => {
   const response = await check(JSON.stringify({ text: 'Cheap spam here, no scam, more SPAM' }));
   assert.equal(response.status, 200);
-  assert.deepEqual(await response.json(), { ok: false, words: ['spam', 'scam'], severity: 'review' });
+  assert.deepEqual(await response.json(), { ok: false, words: ['spam', 'scam'] });
 });
 
 test('a JSON content type with a charset is accepted', async () => {
   const response = await check(JSON.stringify({ text: 'spam' }), 'application/json; charset=utf-8');
   assert.equal(response.status, 200);
-  assert.deepEqual(await response.json(), { ok: false, words: ['spam'], severity: 'review' });
+  assert.deepEqual(await response.json(), { ok: false, words: ['spam'] });
 });
 
 test('a body that is not JSON, or has no text string, is 400 with the reason', async () => {
